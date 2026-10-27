@@ -1,0 +1,1128 @@
+/*
+ * FONT AND THEME SETUP
+ * index.html loads this file with a link element.
+ * The sections below style the title screen, game board, win dialog, and mobile layout.
+ */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Nunito:wght@600;700;800;900&display=swap");
+/* Shared colors used throughout the game. */
+:root {
+  --ink: #24292b;
+  --charcoal: #363b3d;
+  --gray: #d8d8d4;
+  --gray-dark: #a5a6a2;
+  --yellow: #ffd500;
+  --blue: #22a8d5;
+  --soil: #81502f;
+  --soil-dark: #57331f;
+  --green: #84b82a;
+  --button-border: #24292b;
+}
+/* Basic page defaults and shared accessibility styles. */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: #f7f5ef;
+  color: var(--ink);
+  font-family: "DM Sans", sans-serif;
+  font-size: 24px;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+  min-height: 44px;
+}
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #1b9dc7;
+  outline-offset: 3px;
+}
+.hidden {
+  display: none !important;
+}
+.screen {
+  min-height: 100vh;
+}
+/* Title screen: sky, ground, branding, and the start button. */
+.title-screen {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(
+    #bceef0 0% 17%,
+    #dff7ed 17% 19%,
+    #7ea92c 19% 20%,
+    #8a552f 20% 100%
+  );
+  padding: 32px 18px;
+}
+.title-sky {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 22%;
+  background: linear-gradient(#b9ebed, #e4f7ed);
+}
+.sun {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #ffe58a;
+  right: 12%;
+  top: 14%;
+  opacity: 0.9;
+}
+.cloud {
+  position: absolute;
+  height: 30px;
+  width: 180px;
+  background: #f8ffff;
+  border-radius: 50px;
+  opacity: 0.85;
+}
+.cloud:before,
+.cloud:after {
+  content: "";
+  position: absolute;
+  background: inherit;
+  border-radius: 50%;
+  bottom: 4px;
+}
+.cloud:before {
+  width: 65px;
+  height: 65px;
+  left: 32px;
+}
+.cloud:after {
+  width: 45px;
+  height: 45px;
+  left: 85px;
+}
+.cloud-one {
+  left: 9%;
+  top: 26%;
+}
+.cloud-two {
+  right: 24%;
+  top: 55%;
+  transform: scale(0.7);
+}
+.title-grass {
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 25px;
+  background:
+    repeating-linear-gradient(
+      105deg,
+      transparent 0 9px,
+      #77a827 10px 13px,
+      transparent 14px 21px
+    ),
+    #7ca72c;
+}
+.title-card {
+  z-index: 1;
+  width: min(560px, 94vw);
+  text-align: center;
+  background: #fffdf5;
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 10px 10px 0 #463b2d;
+  padding: 34px 28px 30px;
+}
+.brand-mark,
+.mini-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-family: Georgia, serif;
+  letter-spacing: 1.5px;
+  color: #333;
+  font-size: 42px;
+}
+.brand-jerrycan {
+  display: block;
+  width: 108px;
+  height: 128px;
+  object-fit: contain;
+}
+.eyebrow {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #777;
+  margin: 22px 0 5px;
+}
+.title-card h1,
+.game-heading h1 {
+  font-family: "Nunito", sans-serif;
+  font-weight: 900;
+  font-size: clamp(48px, 8vw, 82px);
+  line-height: 0.95;
+  margin: 0;
+  letter-spacing: -3px;
+}
+.title-card h1 em,
+.game-heading h1 em {
+  font-style: normal;
+  color: #b56c35;
+}
+.title-copy {
+  font-size: 25px;
+  line-height: 1.6;
+  color: #515858;
+  margin: 20px 0 22px;
+}
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 3px solid var(--button-border);
+  background: var(--yellow);
+  color: #24292b;
+  font-weight: 800;
+  font-size: 24px;
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 4px 0 #c6a900;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.primary-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #c6a900;
+}
+.primary-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #c6a900;
+}
+.primary-button span {
+  margin-left: 0;
+  font-size: 44px;
+  line-height: 1;
+  vertical-align: middle;
+}
+.small-note {
+  font-size: 24px;
+  color: #777;
+  margin: 19px 0 0;
+}
+.title-dirt {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20%;
+  background:
+    repeating-radial-gradient(
+      ellipse at 20% 20%,
+      #a66c3e 0 3px,
+      transparent 4px 27px
+    ),
+    repeating-linear-gradient(
+      7deg,
+      var(--soil-dark) 0 4px,
+      var(--soil) 5px 23px
+    );
+  border-top: 7px solid #6e9425;
+  opacity: 0.95;
+}
+.dirt-stone {
+  position: absolute;
+  width: 36px;
+  height: 17px;
+  border-radius: 50%;
+  background: #bd8853;
+  left: 17%;
+  top: 40%;
+}
+.dirt-stone.two {
+  left: 78%;
+  top: 70%;
+  width: 55px;
+}
+.dirt-bone {
+  position: absolute;
+  left: 62%;
+  top: 24%;
+  font-size: 35px;
+  color: #f1d9a3;
+}
+/* Game header and the short instruction row above the puzzle. */
+.game-screen {
+  padding: 0 18px 24px;
+  background: #f8f7f1;
+}
+.game-header {
+  max-width: 1180px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  padding: 18px 0 14px;
+  border-bottom: 2px solid #e3e0d7;
+}
+.mini-brand {
+  justify-content: flex-start;
+  font-size: 36px;
+}
+.game-heading {
+  text-align: center;
+}
+.game-heading .eyebrow {
+  margin: 0 0 2px;
+  font-size: 21px;
+}
+.game-heading h1 {
+  font-size: 51px;
+  letter-spacing: -1px;
+}
+.move-counter {
+  text-align: right;
+}
+.counter-label {
+  display: block;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #777;
+}
+.move-counter strong {
+  font-family: "Nunito";
+  font-size: 47px;
+}
+.instructions {
+  max-width: 1180px;
+  margin: 13px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  font-size: 23px;
+  line-height: 1.35;
+  text-align: center;
+  color: #555;
+}
+.instruction-icon {
+  display: inline-grid;
+  place-items: center;
+  background: #fff0a8;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  font-size: 44px;
+  color: #574c00;
+}
+kbd {
+  font-family: inherit;
+  font-weight: 800;
+  background: #fff;
+  border: 1px solid #c9c8c1;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 20px;
+}
+.orientation-hint {
+  display: none;
+  flex-basis: 100%;
+  color: #777;
+  font-size: 20px;
+}
+/* Board grid, terrain, obstacles, and the well and reservoir overlays. */
+.board-wrap {
+  width: min(100%, 1180px);
+  max-width: 1180px;
+  margin: 0 auto;
+  aspect-ratio: 3 / 2;
+  border: 4px solid #333a3b;
+  border-radius: 7px;
+  overflow: hidden;
+  box-shadow: 0 5px 0 #c9c6bb;
+  background: #d7d8d4;
+}
+.board {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(30, minmax(0, 1fr));
+  grid-template-rows: repeat(20, minmax(0, 1fr));
+  position: relative;
+  isolation: isolate;
+  /* Paint the complete landscape once so cells do not create seams. */
+  background:
+    radial-gradient(
+      ellipse at 12% 58%,
+      rgba(87, 51, 31, 0.28) 0 6%,
+      transparent 15%
+    ),
+    radial-gradient(
+      ellipse at 78% 72%,
+      rgba(166, 108, 62, 0.35) 0 5%,
+      transparent 13%
+    ),
+    radial-gradient(
+      ellipse at 42% 91%,
+      rgba(87, 51, 31, 0.2) 0 8%,
+      transparent 18%
+    ),
+    radial-gradient(
+      ellipse at 92% 42%,
+      rgba(166, 108, 62, 0.22) 0 4%,
+      transparent 11%
+    ),
+    linear-gradient(#b9ebed 0 20%, #81502f 20% 48%, #57331f 100%);
+}
+.board::before {
+  content: "";
+  position: absolute;
+  top: 20%;
+  left: 0;
+  right: 0;
+  height: 7px;
+  background: #6e9425;
+  z-index: 2;
+  pointer-events: none;
+}
+.board-sky-decorations {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 20%;
+  overflow: hidden;
+  z-index: 1;
+  pointer-events: none;
+}
+.board-sky-sun {
+  position: absolute;
+  width: 12%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #ffe58a;
+  right: 12%;
+  top: 13%;
+  opacity: 0.9;
+}
+.board-sky-cloud {
+  position: absolute;
+  width: 17%;
+  height: 13%;
+  background: #f8ffff;
+  border-radius: 50px;
+  opacity: 0.85;
+}
+.board-sky-cloud::before,
+.board-sky-cloud::after {
+  content: "";
+  position: absolute;
+  bottom: 4%;
+  background: inherit;
+  border-radius: 50%;
+}
+.board-sky-cloud::before {
+  width: 38%;
+  height: 180%;
+  left: 18%;
+}
+.board-sky-cloud::after {
+  width: 28%;
+  height: 130%;
+  left: 48%;
+}
+.board-sky-cloud-one {
+  left: 9%;
+  top: 30%;
+}
+.board-sky-cloud-two {
+  right: 27%;
+  top: 57%;
+  transform: scale(0.7);
+}
+.cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background: transparent;
+  border: 0;
+}
+.cell.ground {
+  overflow: hidden;
+}
+.cell.ground:before {
+  display: none;
+}
+.cell.obstacle {
+  background: transparent;
+  border-color: transparent;
+}
+.obstacle-object {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+.obstacle-shape {
+  position: absolute;
+  inset: 5%;
+  z-index: 1;
+  background: #766e63;
+  border: 2px solid #5c5349;
+  border-radius: 45% 35% 50% 35%;
+  box-shadow:
+    inset -3px -3px 0 #5e554c,
+    2px 2px 0 rgba(70, 58, 43, 0.14);
+}
+.obstacle-shape.rock {
+  clip-path: polygon(
+    12% 20%,
+    45% 0,
+    90% 13%,
+    100% 61%,
+    71% 100%,
+    20% 90%,
+    0 55%
+  );
+  border: 0;
+}
+.obstacle-shape.rock.obstacle-1x2 {
+  inset: 14% 4%;
+  border-radius: 48% 32% 42% 38%;
+}
+.obstacle-shape.rock.obstacle-2x2 {
+  inset: 8%;
+  border-radius: 42% 32% 48% 36%;
+}
+.obstacle-shape.rock.obstacle-2x3 {
+  inset: 4% 2%;
+  border-radius: 38% 28% 45% 32%;
+}
+.obstacle-shape.fossil {
+  inset: 16%;
+  background: transparent;
+  border: 4px solid #e4d5ad;
+  border-radius: 45% 55% 35% 60%;
+  box-shadow:
+    inset 0 0 0 4px rgba(130, 86, 50, 0.45),
+    2px 2px 0 rgba(70, 58, 43, 0.18);
+}
+.obstacle-shape.fossil::before,
+.obstacle-shape.fossil::after {
+  content: "";
+  position: absolute;
+  background: #e4d5ad;
+  border-radius: 50%;
+}
+.obstacle-shape.fossil::before {
+  width: 18%;
+  height: 75%;
+  left: 40%;
+  top: 12%;
+  box-shadow:
+    18px 2px 0 #e4d5ad,
+    -18px 2px 0 #e4d5ad;
+}
+.obstacle-shape.fossil::after {
+  width: 70%;
+  height: 16%;
+  left: 15%;
+  top: 42%;
+}
+.obstacle-shape.fossil.obstacle-1x5 {
+  inset: 20% 3%;
+}
+.obstacle-shape.fossil.obstacle-1x5::before {
+  width: 72%;
+  height: 18%;
+  left: 14%;
+  top: 41%;
+  box-shadow:
+    0 12px 0 #e4d5ad,
+    0 -12px 0 #e4d5ad;
+}
+.obstacle-shape.fossil.obstacle-1x5::after {
+  width: 18%;
+  height: 70%;
+  left: 41%;
+  top: 15%;
+}
+.obstacle-shape.fossil.obstacle-2x3 {
+  inset: 8% 4%;
+}
+.obstacle-shape.broken-pipe {
+  inset: 36% 2%;
+  height: 28%;
+  background: #aeb5b3;
+  border: 4px solid #555c5b;
+  border-radius: 8px;
+  box-shadow: inset 0 3px 0 #eef2ef;
+}
+.obstacle-shape.broken-pipe.vertical {
+  inset: 2% 36%;
+  width: 28%;
+  height: auto;
+}
+.obstacle-shape.broken-pipe::before {
+  content: "";
+  position: absolute;
+  left: 42%;
+  top: -20%;
+  width: 15%;
+  height: 140%;
+  background: #57331f;
+  transform: rotate(24deg);
+  box-shadow: 5px 0 0 #81502f;
+}
+.obstacle-shape.broken-pipe::after {
+  content: "";
+  position: absolute;
+  inset: 18% 4%;
+  background: repeating-linear-gradient(
+    90deg,
+    #57331f 0 10px,
+    #81502f 11px 18px
+  );
+  opacity: 0.75;
+}
+.obstacle-shape.broken-pipe.obstacle-1x4 {
+  inset: 35% 1%;
+  height: 30%;
+}
+.obstacle-shape.broken-pipe.obstacle-2x2 {
+  inset: 28% 4%;
+  height: 44%;
+}
+.obstacle-shape.bone {
+  background: #e4d5ad;
+  border: 0;
+  inset: 30% 8%;
+  height: 30%;
+  border-radius: 5px;
+  box-shadow: none;
+  transform: rotate(-28deg);
+}
+.obstacle-shape.bone:before,
+.obstacle-shape.bone:after {
+  content: "";
+  position: absolute;
+  width: 28%;
+  height: 65%;
+  background: #e4d5ad;
+  border-radius: 50%;
+  top: -22%;
+}
+.obstacle-shape.bone:before {
+  left: -3%;
+}
+.obstacle-shape.bone:after {
+  right: -3%;
+}
+.obstacle-shape.skeleton {
+  background: transparent;
+  border: 3px solid #e4d5ad;
+  border-radius: 50%;
+  inset: 20%;
+  box-shadow: none;
+}
+.obstacle-shape.skeleton:before {
+  content: "";
+  position: absolute;
+  left: 35%;
+  top: 100%;
+  width: 30%;
+  height: 100%;
+  background: #e4d5ad;
+}
+.cell.surface {
+  background: transparent;
+}
+
+/* The first four rows form the above-ground landscape. */
+.cell.surface-row-0,
+.cell.surface-row-1,
+.cell.surface-row-2 {
+  background: transparent;
+}
+
+.cell.surface-row-3 {
+  background: transparent;
+}
+
+/* Grid lines stay hidden until a player points at a usable space. */
+.cell:hover,
+.cell.drop-target {
+  background: #b9e8f2 !important;
+}
+.cell.drop-invalid {
+  background: #f2a3a3 !important;
+}
+.skyline {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  overflow: hidden;
+}
+.skyline:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 4%,
+    #202729 4% 7%,
+    transparent 7% 10%
+  );
+  opacity: 0.98;
+}
+.well-house {
+  position: absolute;
+  inset: 0;
+  background: #a4a6a3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  border: 2px solid #888b88;
+}
+.well-house .brand-mark {
+  font-size: clamp(6px, 1.1vw, 14px);
+  gap: 2px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+.well-house .brand-jerrycan {
+  width: clamp(16px, 2.4vw, 34px);
+  height: clamp(20px, 3vw, 40px);
+}
+.house-label {
+  font-size: clamp(6px, 0.75vw, 10px);
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #555;
+  margin-top: 5px;
+}
+.source-port {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 13px;
+  height: 13px;
+  background: #5b6060;
+  border: 3px solid #b8b9b5;
+  border-radius: 50%;
+  z-index: 5;
+}
+.source-pipe {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 6;
+  pointer-events: none;
+}
+.source-pipe svg {
+  width: 100%;
+  height: 100%;
+}
+.reservoir {
+  position: absolute;
+  inset: 0;
+  background: #f8ffff;
+  border: 3px solid #fff;
+  overflow: hidden;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reservoir-label {
+  text-align: center;
+  z-index: 2;
+  font-size: clamp(6px, 0.95vw, 13px);
+  font-weight: 800;
+  color: #24596b;
+  line-height: 1.25;
+}
+.reservoir-label span {
+  display: block;
+  font-size: 1.5em;
+  margin-bottom: 2px;
+}
+.reservoir-water {
+  position: absolute;
+  left: -15%;
+  right: -15%;
+  bottom: -10%;
+  height: 57%;
+  background: repeating-linear-gradient(0deg, #2fb4dc 0 5px, #7bd5e8 6px 9px);
+  border-radius: 45% 50% 0 0;
+  transform: rotate(-4deg);
+  transition: height 0.5s;
+}
+.reservoir:before {
+  content: "";
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  top: 23%;
+  height: 3px;
+  background: #c6e7ed;
+  transform: rotate(-5deg);
+}
+/* Pipe appearance and visual feedback during dragging or a successful solve. */
+.pipe-piece {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  align-self: stretch;
+  justify-self: stretch;
+  z-index: 4;
+  cursor: grab;
+  touch-action: none;
+  filter: drop-shadow(1px 2px 1px #777);
+  transition: filter 0.15s;
+}
+.pipe-piece:active {
+  cursor: grabbing;
+  filter: drop-shadow(2px 4px 2px #555);
+  z-index: 10;
+}
+.pipe-piece.selected {
+  outline: 2px dashed #168db6;
+  outline-offset: -1px;
+  filter: drop-shadow(0 0 3px #00a9d9);
+}
+.pipe-piece svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.pipe-shadow {
+  stroke: #555c5b;
+  stroke-width: 68;
+  fill: none;
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+}
+.pipe-metal {
+  stroke: #aeb5b3;
+  stroke-width: 60;
+  fill: none;
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+}
+.pipe-water {
+  stroke: #42c6e5;
+  stroke-width: 22;
+  fill: none;
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+  opacity: 0;
+}
+.pipe-highlight {
+  stroke: #eef2ef;
+  stroke-width: 8;
+  fill: none;
+  stroke-linecap: butt;
+}
+.pipe-collar {
+  fill: #626a68;
+  stroke: #3f4645;
+  stroke-width: 1.5;
+}
+.pipe-plate {
+  fill: #363b3d;
+  stroke: #24292b;
+  stroke-width: 2;
+}
+.pipe-rivet {
+  fill: #1f2425;
+  stroke: #69706e;
+  stroke-width: 1.5;
+}
+.pipe-piece.dragging {
+  opacity: 0.7;
+  z-index: 20;
+}
+.pipe-piece.watered .pipe-metal {
+  stroke: #43c4e7;
+}
+.pipe-piece.watered .pipe-water,
+.source-pipe.watered .pipe-water {
+  opacity: 1;
+  stroke-dasharray: 8 7;
+  animation: water-through-pipe 0.8s linear infinite;
+}
+@keyframes water-through-pipe {
+  to {
+    stroke-dashoffset: -30;
+  }
+}
+.water-flow {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 7px;
+  height: 0;
+  background: #39c6e9;
+  z-index: 8;
+  border-radius: 10px;
+  transform: translateX(-50%);
+  animation: flow 1.1s ease-in forwards;
+}
+@keyframes flow {
+  0% {
+    height: 0;
+    opacity: 1;
+  }
+  65% {
+    height: 60px;
+    opacity: 1;
+  }
+  100% {
+    height: 80px;
+    opacity: 0;
+  }
+}
+.game-footer {
+  max-width: 1180px;
+  margin: 17px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 21px;
+  color: #666;
+}
+/* Footer legend and the restart control below the board. */
+.level-label {
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.level-label strong {
+  color: #282d2f;
+  font-size: 24px;
+}
+.legend {
+  display: flex;
+  gap: 16px;
+}
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-pipe {
+  width: 48px;
+  height: 20px;
+  border-radius: 5px;
+  background: #aeb5b4;
+  border: 2px solid #6c7473;
+}
+.legend-rock {
+  width: 32px;
+  height: 32px;
+  border-radius: 40%;
+  background: #766e63;
+}
+.text-button {
+  background: #fffdf5;
+  border: 2px solid var(--button-border);
+  border-radius: 5px;
+  color: #363b3d;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 16px;
+  max-width: 100%;
+  text-align: center;
+  box-shadow: 0 3px 0 #c9c6bb;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+.text-button:hover {
+  background: #fff0a8;
+  color: #000;
+}
+.text-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #c9c6bb;
+}
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 38, 38, 0.68);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 50;
+}
+/* Win dialog and its celebration animations. */
+.modal-card {
+  width: min(430px, 100%);
+  background: #fffdf5;
+  border: 3px solid #293032;
+  border-radius: 9px;
+  text-align: center;
+  padding: 28px 28px 25px;
+  box-shadow: 9px 9px 0 rgba(0, 0, 0, 0.22);
+  animation: pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+@keyframes pop {
+  from {
+    transform: scale(0.75);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.water-splash {
+  font-size: 39px;
+  animation: bob 0.8s infinite alternate;
+}
+@keyframes bob {
+  to {
+    transform: translateY(-5px) rotate(10deg);
+  }
+}
+.modal-card .eyebrow {
+  margin: 10px 0;
+}
+.modal-card h2 {
+  font-family: "Nunito";
+  font-size: 51px;
+  line-height: 1.1;
+  margin: 0;
+}
+.modal-copy {
+  color: #666;
+  font-size: 24px;
+  line-height: 1.5;
+}
+.stars {
+  font-size: 56px;
+  letter-spacing: 5px;
+  color: #e8b900;
+  margin: 14px 0 0;
+  text-shadow: 1px 2px 0 #8f7100;
+}
+.star-message {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 3px 0 12px;
+}
+.move-summary {
+  font-size: 23px;
+  color: #666;
+}
+.modal-actions {
+  margin-top: 20px;
+}
+/* Small-screen layout changes and reduced-motion accessibility support. */
+@media (max-width: 700px) {
+  .game-screen {
+    padding: 0 8px 16px;
+  }
+  .game-header {
+    grid-template-columns: 1fr 1fr;
+    padding: 13px 0;
+    gap: 8px;
+  }
+  .mini-brand {
+    font-size: 30px;
+  }
+  .mini-brand .brand-jerrycan {
+    width: clamp(64px, 25vw, 96px);
+    height: clamp(77px, 30vw, 116px);
+  }
+  .game-heading {
+    grid-column: 1/-1;
+    grid-row: 1;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .game-heading h1 {
+    font-size: 44px;
+  }
+  .move-counter {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .mini-brand {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .instructions {
+    font-size: clamp(18px, 5vw, 21px);
+    line-height: 1.4;
+    gap: 10px;
+  }
+  .instructions .text-button {
+    width: 100%;
+    margin-left: 0;
+    padding: 16px;
+  }
+  .board-wrap {
+    border-width: 2px;
+  }
+  .board {
+    grid-template-rows: repeat(20, minmax(0, 1fr));
+  }
+  .game-footer {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .game-footer .text-button {
+    width: 100%;
+    padding: 16px;
+  }
+  .legend {
+    gap: 9px;
+  }
+  .legend span {
+    font-size: 20px;
+  }
+  .title-card {
+    padding: 28px 20px;
+    max-width: calc(100vw - 24px);
+  }
+  .title-dirt {
+    height: 14%;
+  }
+  .title-copy {
+    font-size: 24px;
+  }
+  .small-note {
+    font-size: 24px;
+    line-height: 1.5;
+  }
+  .modal-card {
+    padding: 24px 20px 22px;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+  }
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .orientation-hint {
+    display: block;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *:before,
+  *:after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

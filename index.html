@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Page setup and the connection to the stylesheet. -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Well Dug — charity: water puzzle</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- The main app contains the title screen and the game screen. -->
+  <main id="app">
+    <!-- Start screen shown before the player begins the game. -->
+    <section id="title-screen" class="screen title-screen" aria-label="Well Dug title screen">
+      <div class="title-sky">
+        <span class="sun"></span><span class="cloud cloud-one"></span><span class="cloud cloud-two"></span>
+        <div class="title-grass"></div>
+      </div>
+      <div class="title-card">
+        <div class="brand-mark" aria-label="charity: water">
+          <img class="brand-jerrycan" src="img/water-can-transparent.png" alt="">
+          <span><b>charity:</b> water</span>
+        </div>
+        <p class="eyebrow">A water connection puzzle</p>
+        <h1>Well <em>Dug</em></h1>
+        <p class="title-copy">Every pipe makes a difference.<br>Connect the well to bring clean water home.</p>
+        <button id="start-button" class="primary-button">Click to start <span aria-hidden="true">→</span></button>
+        <p class="small-note">Drag pipes to move them · Press <kbd>R</kbd> to rotate</p>
+      </div>
+      <div class="title-dirt"><span class="dirt-stone"></span><span class="dirt-bone">⌁</span><span class="dirt-stone two"></span></div>
+    </section>
+
+    <!-- Game screen. JavaScript finds these IDs and fills the board with pipes. -->
+    <section id="game-screen" class="screen game-screen hidden" aria-label="Well Dug game">
+      <header class="game-header">
+        <div class="mini-brand"><img class="brand-jerrycan" src="img/water-can-transparent.png" alt=""><span><b>charity:</b> water</span></div>
+        <div class="game-heading"><span class="eyebrow">LEVEL <span id="level-number">01</span></span><h1>Well <em>Dug</em></h1></div>
+        <div class="move-counter"><span class="counter-label">YOUR MOVES</span><strong id="move-count">0</strong></div>
+      </header>
+      <div class="instructions"><span class="instruction-icon">↔</span> Drag a pipe into an open space to move it. Select a pipe and press <kbd>R</kbd> to rotate it. <button id="rotate-button" class="text-button" type="button">↻ Rotate selected pipe</button><span class="orientation-hint">Turn your device sideways for more room.</span></div>
+      <div class="board-wrap">
+        <div class="board" id="board" aria-label="Puzzle board"></div>
+      </div>
+      <footer class="game-footer">
+        <div class="level-label">LEVEL <strong id="level-footer">01</strong></div>
+        <div class="legend"><span><i class="legend-pipe"></i> Pipe</span><span><i class="legend-rock"></i> Underground obstacle</span></div>
+        <button id="reset-button" class="text-button">↻ Restart level</button>
+      </footer>
+    </section>
+  </main>
+
+  <!-- Win dialog shown by JavaScript after water reaches the reservoir. -->
+  <div id="win-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="win-title">
+    <div class="modal-card">
+      <div class="water-splash" aria-hidden="true">💧</div>
+      <p class="eyebrow">WELL DONE!</p>
+      <h2 id="win-title">You brought the water!</h2>
+      <p class="modal-copy">A connected pipe can make a world of difference.</p>
+      <div id="star-rating" class="stars" aria-label="Your star rating">★★★</div>
+      <p id="star-message" class="star-message">Perfect connection!</p>
+      <p class="move-summary">You solved it in <strong id="final-moves">0</strong> moves.</p>
+      <div class="modal-actions"><button id="replay-button" class="primary-button">Play again <span aria-hidden="true">→</span></button></div>
+    </div>
+  </div>
+  <!-- Load the behavior after the page elements exist in the document. -->
+  <script src="script.js"></script>
+</body>
+</html>
