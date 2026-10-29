@@ -42,6 +42,10 @@
     const [row,col]=cell.split(',').map(Number);
     return !isUnavailableCell(row,col) && !used.has(cell);
   });
+  const visualCellsAboveGrass = (p,r,c) => visualCells(p,r,c).every(cell => {
+    const [row] = cell.split(',').map(Number);
+    return row < PIPE_START_ROWS;
+  });
   const visualCellsOverlap = (first,firstR,firstC,second) => {
     const occupied=new Set(visualCells(first,firstR,firstC));
     return visualCells(second).some(cell=>occupied.has(cell));
@@ -81,13 +85,16 @@
   board.addEventListener('pointerdown', onPointerDown);
   document.getElementById('start-button').addEventListener('click', startGame);
   document.getElementById('reset-button').addEventListener('click', buildLevel);
+  document.getElementById('shuffle-button').addEventListener('click', buildLevel);
   document.getElementById('rotate-button').addEventListener('click', rotateSelected);
   document.getElementById('replay-button').addEventListener('click', () => { modal.classList.add('hidden'); level++; buildLevel(); });
 
   function buildLevel() {
     /* Build a fresh board and reset the counters for the current level. */
     moves=0; won=false; selectedPipe=null; dragState=null; pipes=[]; obstacles=new Set(); obstacleShapes=[]; route=[]; modal.classList.add('hidden');
-    random=createRandom(level);
+    // Use a fresh seed so every start, restart, and shuffle gets a new arrangement.
+    const seed=(Date.now() ^ Math.floor(Math.random()*4294967296))>>>0;
+    random=createRandom(seed);
     moveCountEl.textContent='0'; levelNumber.textContent=String(level).padStart(2,'0'); levelFooter.textContent=String(level).padStart(2,'0');
     board.innerHTML=''; cells=[];
     // A winding route from the well outlet (row 4, col 14) to the reservoir (row 19, col 27).
@@ -95,28 +102,50 @@
     const start={r:4,c:14}, end={r:19,c:27};
     route=makeRoute(start,end);
     const routeKeys=new Set(route.map(p=>key(p.r,p.c)));
-    // Add only a few large obstacles, keeping every covered cell unavailable.
+    // Add one of every supplied obstacle asset, using the filename marker for its footprint.
     const obstacleSpecs=[
-      {kind:'rock',rows:2,cols:3},
-      {kind:'fossil',rows:1,cols:5},
-      {kind:'broken-pipe',rows:2,cols:2},
-      {kind:'rock',rows:1,cols:2},
-      {kind:'fossil',rows:2,cols:3},
-      {kind:'broken-pipe',rows:1,cols:4},
-      {kind:'rock',rows:2,cols:2}
+      {asset:'rock_01_square_1x1.svg',rows:1,cols:1},
+      {asset:'rock_02_wide_1x2.svg',rows:1,cols:2},
+      {asset:'rock_03_tall_3x2.svg',rows:3,cols:2},
+      {asset:'rock_05_extra_wide_1x4.svg',rows:1,cols:4},
+      {asset:'rock_06_landscape_1x2.svg',rows:1,cols:2},
+      {asset:'Skull_2x3.svg',rows:2,cols:3},
+      {asset:'Bone_1x4.svg',rows:1,cols:4},
+      {asset:'cracked_pipe_01_long_split_1x3.svg',rows:1,cols:3},
+      {asset:'cracked_pipe_02_wide_break_1x3.svg',rows:1,cols:3},
+      {asset:'pipe_horizontal_long_split_1x5.svg',rows:1,cols:5},
+      {asset:'pipe_horizontal_short_wide_break_1x2.svg',rows:1,cols:2},
+      {asset:'pipe_elbow_weld_crack_horizontal_2x2.svg',rows:2,cols:2}
     ];
     for(const spec of obstacleSpecs){
-      const {kind,rows,cols}=spec;
+      const {asset,rows,cols}=spec;
+      const canPlace=(r,c)=>{
+        const footprint=[];
+        for(let row=r;row<r+rows;row++) for(let col=c;col<c+cols;col++) footprint.push(key(row,col));
+        return !footprint.some(cell=>{
+          const [row,col]=cell.split(',').map(Number);
+          return routeKeys.has(cell) || obstacles.has(cell) || isUnavailableCell(row,col);
+        });
+      };
+      const savePlacement=(r,c)=>{
+        for(let row=r;row<r+rows;row++) for(let col=c;col<c+cols;col++) obstacles.add(key(row,col));
+        obstacleShapes.push({r,c,rows,cols,asset});
+      };
       let placed=false;
       for(let attempt=0;attempt<100&&!placed;attempt++){
         const r=5+Math.floor(random()*(20-5-rows));
         const c=Math.floor(random()*(COLS-cols));
-        const footprint=[];
-        for(let row=r;row<r+rows;row++) for(let col=c;col<c+cols;col++) footprint.push(key(row,col));
-        if(footprint.some(cell=>routeKeys.has(cell) || obstacles.has(cell) || cell==='19,27')) continue;
-        footprint.forEach(cell=>obstacles.add(cell));
-        obstacleShapes.push({r,c,rows,cols,kind});
+        if(!canPlace(r,c)) continue;
+        savePlacement(r,c);
         placed=true;
+      }
+      // Scan the board if random placement could not find a free footprint.
+      if(!placed){
+        for(let r=5;r<=20-rows&&!placed;r++) for(let c=0;c<=COLS-cols&&!placed;c++){
+          if(!canPlace(r,c)) continue;
+          savePlacement(r,c);
+          placed=true;
+        }
       }
     }
 
@@ -151,14 +180,14 @@
     const reservoir=document.createElement('div'); reservoir.className='reservoir'; reservoir.style.gridColumn='26 / span 5'; reservoir.style.gridRow='18 / span 3';
     reservoir.innerHTML='<div class="reservoir-water" id="reservoir-water"></div><div class="reservoir-label"><span>≈</span>WATER<br>RESERVOIR</div>';
     board.appendChild(reservoir);
-    /* Draw varied underground obstacles. */
+    /* Draw each underground obstacle at its exact grid footprint. */
     obstacleShapes.forEach(obstacle=>{
       const object=document.createElement('div');
-      object.className='obstacle-object';
+      const isStraightBrokenPipe=obstacle.asset.includes('pipe') && !obstacle.asset.includes('elbow');
+      object.className=`obstacle-object${isStraightBrokenPipe?' obstacle-straight-pipe':''}`;
       object.style.gridColumn=`${obstacle.c+1} / span ${obstacle.cols}`;
       object.style.gridRow=`${obstacle.r+1} / span ${obstacle.rows}`;
-      const orientation=obstacle.rows>obstacle.cols?'vertical':'horizontal';
-      object.innerHTML=`<span class="obstacle-shape ${obstacle.kind} ${orientation} obstacle-${obstacle.rows}x${obstacle.cols}"></span>`;
+      object.innerHTML=`<img src="img/Obstacle assets/${obstacle.asset}" alt="Underground obstacle" draggable="false">`;
       board.appendChild(object);
     });
     /* Generate the pipe pieces needed to complete the route. */
@@ -178,6 +207,19 @@
         id:i
       });
     }
+    // Add visible straight pipes of the requested lengths as extra play pieces.
+    [2,2,3,4].forEach((length,index)=>{
+      pieceSpecs.push({
+        shape:'straight',
+        visualType:'straight',
+        visualLength:length,
+        solutionRotation:0,
+        rotation:0,
+        solution:{r:0,c:0},
+        id:route.length+index,
+        isExtra:true
+      });
+    });
     // Start pieces above the green boundary, leaving the well-house footprint clear.
     const desired=pieceSpecs.length;
     const slots=[];
@@ -191,14 +233,15 @@
     const shuffledSpecs=pieceSpecs.slice(); shuffle(shuffledSpecs);
     const usedStartCells=new Set();
     shuffledSpecs.forEach(spec=>{
-      const hidden=spec.shape==='straight' && spec.id%4!==0;
+      const hidden=!spec.isExtra && spec.shape==='straight' && spec.id%4!==0;
       let slot=null;
       let p={...spec,r:hidden?spec.solution.r:0,c:hidden?spec.solution.c:0,rotation:hidden?spec.solutionRotation:0,hidden,el:null};
       if(hidden){ pipes.push(p); return; }
       const rotations=shuffle([0,1,2,3]);
       for(const rotation of rotations){
         p.rotation=rotation;
-        slot=slots.find(candidate=>visualCellsAvailable(p,candidate.r,candidate.c,usedStartCells));
+        slot=slots.find(candidate=>visualCellsAboveGrass(p,candidate.r,candidate.c) &&
+          visualCellsAvailable(p,candidate.r,candidate.c,usedStartCells));
         if(slot) break;
       }
       if(!slot) return;
@@ -312,11 +355,12 @@
     const startCell=cellFromPoint(e.clientX,e.clientY);
     const pointerOffsetR=startCell?Number(startCell.dataset.r)-p.r:0;
     const pointerOffsetC=startCell?Number(startCell.dataset.c)-p.c:0;
-    selectPipe(p);dragState={p,startR:p.r,startC:p.c,pointerId:e.pointerId,el,pointerOffsetR,pointerOffsetC};
+    selectPipe(p);dragState={p,startR:p.r,startC:p.c,pointerId:e.pointerId,el,pointerOffsetR,pointerOffsetC,startX:e.clientX,startY:e.clientY};
     el.classList.add('dragging');el.setPointerCapture?.(e.pointerId);
     e.preventDefault();
     const move=e2=>{
       if(!dragState||dragState.pointerId!==e2.pointerId)return;
+      el.style.transform=`translate(${e2.clientX-dragState.startX}px, ${e2.clientY-dragState.startY}px)`;
       const target=cellFromPoint(e2.clientX,e2.clientY);
       board.querySelectorAll('.drop-target,.drop-invalid').forEach(x=>x.classList.remove('drop-target','drop-invalid'));
       if(target){
@@ -335,7 +379,7 @@
         p0.r=r;p0.c=c;placePipeElement(p0);
         if(r!==oldR||c!==oldC){moves++;moveCountEl.textContent=String(moves);checkConnection();}
       }else{placePipeElement(p0);}
-      el.classList.remove('dragging');board.querySelectorAll('.drop-target,.drop-invalid').forEach(x=>x.classList.remove('drop-target','drop-invalid'));
+      el.style.transform='';el.classList.remove('dragging');board.querySelectorAll('.drop-target,.drop-invalid').forEach(x=>x.classList.remove('drop-target','drop-invalid'));
       window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);dragState=null;
     };
     window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
