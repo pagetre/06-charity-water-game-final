@@ -4,25 +4,37 @@
    * These values describe the same board that index.html displays.
    * JavaScript creates the individual cells and pipe elements inside #board.
    */
-  const ROWS = 20, COLS = 30, SURFACE_ROWS = 4, PIPE_START_ROWS = 4;
+  const ROWS = 20;
+  const COLS = 30;
+  const PIPE_START_ROWS = 4;
   const board = document.getElementById('board');
   const titleScreen = document.getElementById('title-screen');
   const gameScreen = document.getElementById('game-screen');
   const moveCountEl = document.getElementById('move-count');
   const modal = document.getElementById('win-modal');
+  const tutorialModal = document.getElementById('tutorial-modal');
+  const timeoutModal = document.getElementById('timeout-modal');
+  const timerEl = document.getElementById('timer');
+  const difficultySelect = document.getElementById('difficulty-select');
   const starRating = document.getElementById('star-rating');
   const starMessage = document.getElementById('star-message');
-  const levelNumber = document.getElementById('level-number');
-  const levelFooter = document.getElementById('level-footer');
 
-  let level = 1, moves = 0, selectedPipe = null, dragState = null, won = false;
+  let moves = 0, selectedPipe = null, dragState = null, won = false;
   let cells = [], pipes = [], obstacles = new Set(), obstacleShapes = [], route = [];
+  let initialPipePositions = [];
   let random = Math.random;
+  const difficultyTimes = {easy:300,medium:180,hard:60};
+  let difficulty = 'medium', timeLeft = difficultyTimes.medium, timerId = null, tutorialMode = 'start';
+  let audioContext = null;
 
   /* Directions use N/E/S/W bits. Pipe shape and rotation determine its open ends. */
   const DIRS = [{name:'N',dr:-1,dc:0,bit:1,op:4},{name:'E',dr:0,dc:1,bit:2,op:8},{name:'S',dr:1,dc:0,bit:4,op:1},{name:'W',dr:0,dc:-1,bit:8,op:2}];
   const shapes = {straight:5, elbow:3, tee:11, cross:15, cap:1};
-  const rotateMask = (mask, turns=1) => { for(let i=0;i<turns;i++) mask=((mask<<1)&15)|(mask>>3); return mask; };
+  // Rotating the four-bit mask moves each open end clockwise.
+  const rotateMask = (mask, turns=1) => {
+    for(let i=0;i<turns;i++) mask=((mask<<1)&15)|(mask>>3);
+    return mask;
+  };
   const maskFor = p => rotateMask(shapes[p.shape], p.rotation);
   const activeVisualLength = p => p.visualType==='straight' ? p.visualLength : 2;
   const visualCells = (p,r=p.r,c=p.c) => {
@@ -51,6 +63,7 @@
   };
   const placementAllowed = (p,r,c) => visualCellsAvailable(p,r,c) &&
     !pipes.some(other=>other!==p && visualCellsOverlap(p,r,c,other));
+  // Show red feedback while a dragged pipe is over an occupied or blocked area.
   function showDropPreview(p,r,c){
     p.el.classList.toggle('invalid-placement', !placementAllowed(p,r,c));
   }
@@ -74,25 +87,114 @@
       return value/4294967296;
     };
   }
+  function getAudioContext(){
+    if(audioContext)return audioContext;
+    const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+    if(!AudioContextClass)return null;
+    audioContext=new AudioContextClass();
+    return audioContext;
+  }
+  function resumeAudio(){
+    const context=getAudioContext();
+    if(context?.state==='suspended')context.resume();
+    return context;
+  }
+  function playMetalSound(){
+    const context=resumeAudio();
+    if(!context)return;
+    const now=context.currentTime;
+    const oscillator=context.createOscillator();
+    const gain=context.createGain();
+    oscillator.type='triangle';
+    oscillator.frequency.setValueAtTime(220,now);
+    oscillator.frequency.exponentialRampToValueAtTime(75,now+0.12);
+    gain.gain.setValueAtTime(0.001,now);
+    gain.gain.exponentialRampToValueAtTime(0.28,now+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001,now+0.14);
+    oscillator.connect(gain);gain.connect(context.destination);
+    oscillator.start(now);oscillator.stop(now+0.15);
+  }
+  function playWaterSound(){
+    const context=resumeAudio();
+    if(!context)return;
+    const duration=2.5;
+    const buffer=context.createBuffer(1,context.sampleRate*duration,context.sampleRate);
+    const data=buffer.getChannelData(0);
+    for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*0.45;
+    const source=context.createBufferSource();
+    const filter=context.createBiquadFilter();
+    const gain=context.createGain();
+    filter.type='lowpass';filter.frequency.value=1300;
+    gain.gain.setValueAtTime(0.001,context.currentTime);
+    gain.gain.linearRampToValueAtTime(0.18,context.currentTime+0.25);
+    gain.gain.linearRampToValueAtTime(0.001,context.currentTime+duration);
+    source.buffer=buffer;source.loop=false;
+    source.connect(filter);filter.connect(gain);gain.connect(context.destination);
+    source.start();source.stop(context.currentTime+duration);
+  }
 
   function startGame() {
+    // Audio is started by a user click because browsers block automatic sound.
+    resumeAudio();
     titleScreen.classList.add('hidden'); gameScreen.classList.remove('hidden');
-    buildLevel(); window.scrollTo({top:0,behavior:'smooth'});
+    buildLevel(); openTutorial('start'); window.scrollTo({top:0,behavior:'smooth'});
   }
   board.addEventListener('pointerdown', onPointerDown);
   document.getElementById('start-button').addEventListener('click', startGame);
-  document.getElementById('reset-button').addEventListener('click', buildLevel);
+  document.getElementById('reset-button').addEventListener('click', () => { resetLevel(); startTimer(); });
   document.getElementById('shuffle-button').addEventListener('click', buildLevel);
   document.getElementById('rotate-button').addEventListener('click', rotateSelected);
-  document.getElementById('replay-button').addEventListener('click', () => { modal.classList.add('hidden'); level++; buildLevel(); });
+  document.getElementById('difficulty-button').addEventListener('click', () => openTutorial('change'));
+  document.getElementById('tutorial-close-button').addEventListener('click', closeTutorial);
+  document.getElementById('timeout-retry-button').addEventListener('click', () => {
+    timeoutModal.classList.add('hidden'); resetLevel(); startTimer();
+  });
+  document.getElementById('replay-button').addEventListener('click', () => { modal.classList.add('hidden'); buildLevel(); startTimer(); });
 
+  function openTutorial(mode) {
+    tutorialMode=mode;
+    difficultySelect.value=difficulty;
+    stopTimer();
+    tutorialModal.classList.remove('hidden');
+    document.getElementById('tutorial-close-button').textContent=mode==='start'?'Start digging →':'Apply difficulty →';
+  }
+  function closeTutorial() {
+    difficulty=difficultySelect.value;
+    if(tutorialMode==='change') resetLevel();
+    tutorialModal.classList.add('hidden');
+    startTimer();
+  }
+  function updateTimer() {
+    // Keep the timer display consistent by always showing two digits.
+    const minutes=Math.floor(timeLeft/60).toString().padStart(2,'0');
+    const seconds=(timeLeft%60).toString().padStart(2,'0');
+    timerEl.textContent=`${minutes}:${seconds}`;
+    timerEl.classList.toggle('timer-warning',timeLeft<=30);
+  }
+  function startTimer() {
+    stopTimer();
+    timeLeft=difficultyTimes[difficulty];
+    updateTimer();
+    timerId=setInterval(()=>{
+      timeLeft-=1;
+      if(timeLeft<=0){timeLeft=0;updateTimer();timeUp();return;}
+      updateTimer();
+    },1000);
+  }
+  function stopTimer() {
+    if(timerId){clearInterval(timerId);timerId=null;}
+  }
+  function timeUp() {
+    stopTimer(); won=true; dragState=null; selectedPipe=null;
+    timeoutModal.classList.remove('hidden');
+  }
   function buildLevel() {
     /* Build a fresh board and reset the counters for the current level. */
-    moves=0; won=false; selectedPipe=null; dragState=null; pipes=[]; obstacles=new Set(); obstacleShapes=[]; route=[]; modal.classList.add('hidden');
+    moves=0; won=false; selectedPipe=null; dragState=null; pipes=[]; obstacles=new Set(); obstacleShapes=[]; route=[]; modal.classList.add('hidden'); timeoutModal.classList.add('hidden');
     // Use a fresh seed so every start, restart, and shuffle gets a new arrangement.
     const seed=(Date.now() ^ Math.floor(Math.random()*4294967296))>>>0;
     random=createRandom(seed);
-    moveCountEl.textContent='0'; levelNumber.textContent=String(level).padStart(2,'0'); levelFooter.textContent=String(level).padStart(2,'0');
+    moveCountEl.textContent='0';
     board.innerHTML=''; cells=[];
     // The solution uses the real pipe sizes, then scatters those pieces above ground.
     route=makeSolution();
@@ -145,13 +247,10 @@
     }
 
     for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-      const el=document.createElement('div'); el.className='cell'; el.dataset.r=r; el.dataset.c=c;
-      if(r<SURFACE_ROWS) {
-        el.classList.add('surface',`surface-row-${r}`);
-      } else {
-        el.classList.add('ground');
-      }
-      if(r===1 && c===14){ el.classList.add('house-cell'); el.style.gridColumn='13 / span 5'; el.style.gridRow='1 / span 4'; }
+      const el=document.createElement('div');
+      el.className='cell';
+      el.dataset.r=r;
+      el.dataset.c=c;
       // Elements are kept in a flat grid; the well house and reservoir are layered across multiple cells below.
       board.appendChild(el); cells.push(el);
     }
@@ -162,7 +261,7 @@
     board.appendChild(skyDecorations);
     /* Add the above-ground well house, faucet, and reservoir overlays. */
     const house=document.createElement('div'); house.className='well-house'; house.style.gridColumn='13 / span 5'; house.style.gridRow='1 / span 4';
-    house.innerHTML='<div class="brand-mark"><img class="brand-jerrycan" src="img/water-can-transparent.png" alt=""><span><b>charity:</b> water</span></div><div class="house-label">WELL HOUSE</div><span class="source-port"></span>';
+    house.innerHTML='<span class="house-post house-post-left"></span><span class="house-post house-post-right"></span><div class="brand-mark"><img class="brand-jerrycan" src="img/water-can-transparent.png" alt=""><span><b>charity:</b> water</span></div><div class="house-label">WELL HOUSE</div><span class="source-port"></span>';
     board.appendChild(house);
     // This fixed outlet is part of the well house and cannot be dragged.
     const sourcePipe=document.createElement('div');
@@ -188,12 +287,17 @@
     /* Generate the pipe pieces needed to complete the route. */
     // Pieces begin scattered in the open cells, with their orientations randomized.
     const pieceSpecs=route.slice();
-    // Keep the same total number of visible pipes as the original level.
-    [2,2].forEach((length,index)=>{
+    // Add extra pieces to make the available set less predictable.
+    [
+      {shape:'straight',visualType:'straight',visualLength:2},
+      {shape:'straight',visualType:'straight',visualLength:2},
+      {shape:'elbow',visualType:'corner',visualLength:2},
+      {shape:'straight',visualType:'straight',visualLength:4},
+      {shape:'straight',visualType:'straight',visualLength:3},
+      {shape:'straight',visualType:'straight',visualLength:2}
+    ].forEach((extra,index)=>{
       pieceSpecs.push({
-        shape:'straight',
-        visualType:'straight',
-        visualLength:length,
+        ...extra,
         solutionRotation:0,
         rotation:0,
         solution:{r:0,c:0},
@@ -224,6 +328,24 @@
       p.r=slot.r;p.c=slot.c;
       visualCells(p).forEach(cell=>usedStartCells.add(cell));
       pipes.push(p);
+    });
+    initialPipePositions=pipes.map(p=>({id:p.id,r:p.r,c:p.c,rotation:p.rotation}));
+    renderPipes();
+  }
+
+  function resetLevel() {
+    /* Restore the original piece arrangement without changing obstacles. */
+    moves=0; won=false; selectedPipe=null; dragState=null; modal.classList.add('hidden'); timeoutModal.classList.add('hidden');
+    stopTimer();
+    moveCountEl.textContent='0';
+    timeLeft=difficultyTimes[difficulty]; updateTimer();
+    board.querySelector('.source-pipe')?.classList.remove('watered');
+    initialPipePositions.forEach(position=>{
+      const pipe=pipes.find(p=>p.id===position.id);
+      if(!pipe)return;
+      pipe.r=position.r;
+      pipe.c=position.c;
+      pipe.rotation=position.rotation;
     });
     renderPipes();
   }
@@ -268,7 +390,7 @@
     return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true"><path class="pipe-shadow" d="${fullBodyPath}"/><path class="pipe-metal" d="${fullBodyPath}"/><path class="pipe-water" d="${fullBodyPath}"/>${plateStart}${plateEnd}</svg>`;
   }
   function cornerPipeSVG(p){
-    const mask=maskFor(p), cx=100,cy=100;
+    const mask=maskFor(p);
     const elbowPaths={
       3:{path:'M 50 0 L 50 150 L 200 150',endpoints:[{x:50,y:0,dir:'N'},{x:200,y:150,dir:'E'}]},
       6:{path:'M 200 50 L 50 50 L 50 200',endpoints:[{x:200,y:50,dir:'E'},{x:50,y:200,dir:'S'}]},
@@ -322,7 +444,7 @@
     const startCell=cellFromPoint(e.clientX,e.clientY);
     const pointerOffsetR=startCell?Number(startCell.dataset.r)-p.r:0;
     const pointerOffsetC=startCell?Number(startCell.dataset.c)-p.c:0;
-    selectPipe(p);dragState={p,startR:p.r,startC:p.c,pointerId:e.pointerId,el,pointerOffsetR,pointerOffsetC,startX:e.clientX,startY:e.clientY};
+    selectPipe(p);dragState={p,pointerId:e.pointerId,el,pointerOffsetR,pointerOffsetC,startX:e.clientX,startY:e.clientY};
     el.classList.add('dragging');el.setPointerCapture?.(e.pointerId);
     e.preventDefault();
     const move=e2=>{
@@ -343,7 +465,7 @@
       const p0=dragState.p; const oldR=p0.r,oldC=p0.c;
       if(target && placementAllowed(p0,r,c)){
         p0.r=r;p0.c=c;placePipeElement(p0);
-        if(r!==oldR||c!==oldC){moves++;moveCountEl.textContent=String(moves);checkConnection();}
+        if(r!==oldR||c!==oldC){moves++;moveCountEl.textContent=String(moves);playMetalSound();checkConnection();}
       }else{placePipeElement(p0);}
       el.style.transform='';el.classList.remove('dragging','invalid-placement');
       window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);dragState=null;
@@ -358,7 +480,7 @@
     moves++;moveCountEl.textContent=String(moves);checkConnection();
   }
   document.addEventListener('keydown',e=>{
-    if(e.key.toLowerCase()==='r'&&!gameScreen.classList.contains('hidden')&&!modal.classList.contains('hidden')===false){
+    if(e.key.toLowerCase()==='r'&&!gameScreen.classList.contains('hidden')&&modal.classList.contains('hidden')){
       if(!e.target.matches('input,textarea,button'))rotateSelected();
     }
   });
@@ -419,7 +541,8 @@
     if(reachedReservoir)winGame([...visited.values()]);
   }
   function winGame(connectedPipes=[]){
-    if(won)return;won=true;
+    if(won)return;won=true;stopTimer();
+    playWaterSound();
     const faucet=cellAt(3,14);const flow=document.createElement('div');flow.className='water-flow';faucet.appendChild(flow);
     connectedPipes.forEach(pipe=>pipe.el.classList.add('watered'));
     board.querySelector('.source-pipe').classList.add('watered');

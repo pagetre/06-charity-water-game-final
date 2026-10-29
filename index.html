@@ -25,28 +25,82 @@
         <h1>Well <em>Dug</em></h1>
         <p class="title-copy">Every pipe makes a difference.<br>Connect the well to bring clean water home.</p>
         <button id="start-button" class="primary-button">Click to start <span aria-hidden="true">→</span></button>
-        <p class="small-note">Drag pipes to move them · Press <kbd>R</kbd> to rotate</p>
       </div>
       <div class="title-dirt"><span class="dirt-stone"></span><span class="dirt-bone">⌁</span><span class="dirt-stone two"></span></div>
+      <div class="title-underground-obstacles" aria-hidden="true">
+        <img class="title-obstacle title-obstacle-rock" src="img/Obstacle assets/rock_03_tall_3x2.svg" alt="">
+        <img class="title-obstacle title-obstacle-bone" src="img/Obstacle assets/Bone_1x4.svg" alt="">
+        <img class="title-obstacle title-obstacle-pipe" src="img/Obstacle assets/cracked_pipe_01_long_split_1x3.svg" alt="">
+        <img class="title-obstacle title-obstacle-skull" src="img/Obstacle assets/Skull_2x3.svg" alt="">
+      </div>
     </section>
 
     <!-- Game screen. JavaScript finds these IDs and fills the board with pipes. -->
     <section id="game-screen" class="screen game-screen hidden" aria-label="Well Dug game">
       <header class="game-header">
         <div class="mini-brand"><img class="brand-jerrycan" src="img/water-can-transparent.png" alt=""><span><b>charity:</b> water</span></div>
-        <div class="game-heading"><span class="eyebrow">LEVEL <span id="level-number">01</span></span><h1>Well <em>Dug</em></h1></div>
-        <div class="move-counter"><span class="counter-label">YOUR MOVES</span><strong id="move-count">0</strong></div>
+        <div class="game-heading"><h1>Well <em>Dug</em></h1></div>
+        <div class="game-stats">
+          <div class="move-counter"><span class="counter-label">YOUR MOVES</span><strong id="move-count">0</strong></div>
+          <div class="timer-counter"><span class="counter-label">TIME LEFT</span><strong id="timer">03:00</strong></div>
+        </div>
+        <div class="instruction-controls">
+          <button id="rotate-button" class="text-button" type="button">↻ Rotate</button>
+          <button id="shuffle-button" class="text-button" type="button">🔀 Shuffle</button>
+          <button id="reset-button" class="text-button" type="button">↻ Restart</button>
+          <button id="difficulty-button" class="text-button" type="button">⚙ Difficulty</button>
+        </div>
       </header>
-      <div class="instructions"><span class="instruction-icon">↔</span> Drag a pipe into an open space to move it. Select a pipe and press <kbd>R</kbd> to rotate it. <span class="instruction-controls"><button id="rotate-button" class="text-button" type="button">↻ Rotate selected pipe</button><button id="shuffle-button" class="text-button" type="button">🔀 Shuffle obstacles and pipes</button></span><span class="orientation-hint">Turn your device sideways for more room.</span></div>
       <div class="board-wrap">
         <div class="board" id="board" aria-label="Puzzle board"></div>
       </div>
-      <footer class="game-footer">
-        <div class="level-label">LEVEL <strong id="level-footer">01</strong></div>
-        <button id="reset-button" class="text-button">↻ Restart level</button>
-      </footer>
     </section>
   </main>
+
+  <footer class="site-footer">
+    <div class="footer-side footer-support">
+      <div class="footer-logo">
+        <img src="img/water-can-transparent.png" alt="">
+        <span><b>charity:</b> water</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://www.charitywater.org/" target="_blank" rel="noopener noreferrer">Visit charity: water</a>
+        <a href="https://www.charitywater.org/donate" target="_blank" rel="noopener noreferrer">Donate</a>
+      </div>
+    </div>
+    <div class="footer-side footer-how-to-play">
+      <h2>How to play</h2>
+      <p class="footer-reminder">Drag, rotate, and drop pipes to connect them from the well house to the water reservoir.</p>
+    </div>
+  </footer>
+
+  <!-- Tutorial dialog shown when the player first opens the game. -->
+  <div id="tutorial-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
+    <div class="modal-card tutorial-card">
+      <div class="water-splash" aria-hidden="true">💧</div>
+      <p class="eyebrow">HOW TO PLAY</p>
+      <h2 id="tutorial-title">Dig the well</h2>
+      <p class="modal-copy">Drag pipes into open spaces, rotate them when needed, and drop them to connect the pipes from the well house to the water reservoir so you can dig the well.</p>
+      <label class="difficulty-choice" for="difficulty-select">Choose your difficulty
+        <select id="difficulty-select">
+          <option value="easy">Easy — 5 minutes</option>
+          <option value="medium" selected>Medium — 3 minutes</option>
+          <option value="hard">Hard — 1 minute</option>
+        </select>
+      </label>
+      <div class="modal-actions"><button id="tutorial-close-button" class="primary-button" type="button">Start digging <span aria-hidden="true">→</span></button></div>
+    </div>
+  </div>
+
+  <div id="timeout-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="timeout-title">
+    <div class="modal-card">
+      <div class="water-splash" aria-hidden="true">⏱</div>
+      <p class="eyebrow">TIME'S UP</p>
+      <h2 id="timeout-title">Keep digging</h2>
+      <p class="modal-copy">The timer ran out before the pipes were connected. Try again and dig the well before time runs out.</p>
+      <div class="modal-actions"><button id="timeout-retry-button" class="primary-button" type="button">Try again <span aria-hidden="true">→</span></button></div>
+    </div>
+  </div>
 
   <!-- Win dialog shown by JavaScript after water reaches the reservoir. -->
   <div id="win-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="win-title">
