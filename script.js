@@ -24,7 +24,6 @@
   const shapes = {straight:5, elbow:3, tee:11, cross:15, cap:1};
   const rotateMask = (mask, turns=1) => { for(let i=0;i<turns;i++) mask=((mask<<1)&15)|(mask>>3); return mask; };
   const maskFor = p => rotateMask(shapes[p.shape], p.rotation);
-  const rotationForMask = (shape,mask) => { for(let rotation=0;rotation<4;rotation++) if(rotateMask(shapes[shape],rotation)===mask) return rotation; return 0; };
   const activeVisualLength = p => p.visualType==='straight' ? p.visualLength : 2;
   const visualCells = (p,r=p.r,c=p.c) => {
     const cellsForPiece=[];
@@ -51,14 +50,12 @@
     return visualCells(second).some(cell=>occupied.has(cell));
   };
   const placementAllowed = (p,r,c) => visualCellsAvailable(p,r,c) &&
-    !pipes.some(other=>!other.hidden && other!==p && visualCellsOverlap(p,r,c,other));
+    !pipes.some(other=>other!==p && visualCellsOverlap(p,r,c,other));
   function showDropPreview(p,r,c){
-    const allowed=placementAllowed(p,r,c);
-    visualCells(p,r,c).forEach(cell=>{
-      const [row,col]=cell.split(',').map(Number);
-      if(inBounds(row,col)) cellAt(row,col).classList.add(allowed?'drop-target':'drop-invalid');
-    });
+    p.el.classList.toggle('invalid-placement', !placementAllowed(p,r,c));
   }
+  const SOURCE = {r:4,c:14};
+  const inReservoir = (r,c) => r>=17 && r<=19 && c>=25 && c<=29;
   const key = (r,c) => `${r},${c}`;
   const inBounds = (r,c) => r>=0 && r<ROWS && c>=0 && c<COLS;
   const cellAt = (r,c) => cells[r*COLS+c];
@@ -97,11 +94,9 @@
     random=createRandom(seed);
     moveCountEl.textContent='0'; levelNumber.textContent=String(level).padStart(2,'0'); levelFooter.textContent=String(level).padStart(2,'0');
     board.innerHTML=''; cells=[];
-    // A winding route from the well outlet (row 4, col 14) to the reservoir (row 19, col 27).
-    // Route pieces are shuffled into the underground work area so players must reposition and rotate them.
-    const start={r:4,c:14}, end={r:19,c:27};
-    route=makeRoute(start,end);
-    const routeKeys=new Set(route.map(p=>key(p.r,p.c)));
+    // The solution uses the real pipe sizes, then scatters those pieces above ground.
+    route=makeSolution();
+    const routeKeys=new Set(route.flatMap(spec=>visualCells({...spec,rotation:spec.solutionRotation},spec.solution.r,spec.solution.c)));
     // Add one of every supplied obstacle asset, using the filename marker for its footprint.
     const obstacleSpecs=[
       {asset:'rock_01_square_1x1.svg',rows:1,cols:1},
@@ -178,7 +173,7 @@
     board.appendChild(sourcePipe);
     // Reservoir is a large, clear destination in the bottom-right corner.
     const reservoir=document.createElement('div'); reservoir.className='reservoir'; reservoir.style.gridColumn='26 / span 5'; reservoir.style.gridRow='18 / span 3';
-    reservoir.innerHTML='<div class="reservoir-water" id="reservoir-water"></div><div class="reservoir-label"><span>≈</span>WATER<br>RESERVOIR</div>';
+    reservoir.innerHTML='<img src="img/water resevoir.svg" alt="Water reservoir" draggable="false"><span class="reservoir-label">WATER RESERVOIR</span>';
     board.appendChild(reservoir);
     /* Draw each underground obstacle at its exact grid footprint. */
     obstacleShapes.forEach(obstacle=>{
@@ -192,23 +187,9 @@
     });
     /* Generate the pipe pieces needed to complete the route. */
     // Pieces begin scattered in the open cells, with their orientations randomized.
-    const occupied=new Set([key(3,14),key(19,27)]);
-    const pieceSpecs=[];
-    for(let i=0;i<route.length;i++){
-      const point=route[i], mask=requiredMask(route,i);
-      const shape=shapeFromMask(mask);
-      pieceSpecs.push({
-        shape,
-        visualType:shape==='elbow'?'corner':'straight',
-        visualLength:shape==='elbow'?2:2+(i%3),
-        solutionRotation:rotationForMask(shape,mask),
-        rotation:0,
-        solution:{r:point.r,c:point.c},
-        id:i
-      });
-    }
-    // Add visible straight pipes of the requested lengths as extra play pieces.
-    [2,2,3,4].forEach((length,index)=>{
+    const pieceSpecs=route.slice();
+    // Keep the same total number of visible pipes as the original level.
+    [2,2].forEach((length,index)=>{
       pieceSpecs.push({
         shape:'straight',
         visualType:'straight',
@@ -221,22 +202,17 @@
       });
     });
     // Start pieces above the green boundary, leaving the well-house footprint clear.
-    const desired=pieceSpecs.length;
     const slots=[];
     for(let r=0;r<PIPE_START_ROWS;r++) for(let c=0;c<COLS;c++){
-      const k=key(r,c);
       if(!isUnavailableCell(r,c)) slots.push({r,c});
     }
     shuffle(slots);
-    // Shuffle which route-piece is placed at which start slot; pieces are movable and rotatable.
-    // Keep the piece set exactly sufficient to form the route.
+    // Shuffle which piece goes to which start slot; pieces are movable and rotatable.
     const shuffledSpecs=pieceSpecs.slice(); shuffle(shuffledSpecs);
     const usedStartCells=new Set();
     shuffledSpecs.forEach(spec=>{
-      const hidden=!spec.isExtra && spec.shape==='straight' && spec.id%4!==0;
       let slot=null;
-      let p={...spec,r:hidden?spec.solution.r:0,c:hidden?spec.solution.c:0,rotation:hidden?spec.solutionRotation:0,hidden,el:null};
-      if(hidden){ pipes.push(p); return; }
+      let p={...spec,r:0,c:0,rotation:0,el:null};
       const rotations=shuffle([0,1,2,3]);
       for(const rotation of rotations){
         p.rotation=rotation;
@@ -249,39 +225,30 @@
       visualCells(p).forEach(cell=>usedStartCells.add(cell));
       pipes.push(p);
     });
-    // Place one locked source connector and target connector, both fixed to their structures.
     renderPipes();
-    // Keep a predictable solvable level: piece route is available, but shuffled around the board.
   }
 
-  function makeRoute(start,end) {
-    /* Create the fixed solution path used to generate a solvable level. */
-    // Make a deterministic, winding orthogonal route that avoids the source/target overlays.
-    const points=[{...start}]; let {r,c}=start;
-    // Descend, then meander through the underground before heading toward the reservoir.
-    const waypoints=[
-      {r:8,c:14},{r:8,c:18},{r:11,c:18},{r:11,c:24},{r:16,c:24},{r:19,c:27}
+  function makeSolution() {
+    /* Lay real pieces end to end from the well outlet to the reservoir. */
+    const steps=[
+      {straight:3},{turn:'E'},{straight:2},{turn:'S'},
+      {straight:3},{turn:'E'},{straight:4},{turn:'S'}
     ];
-    waypoints.forEach(w=>{
-      while(r!==w.r){r+=Math.sign(w.r-r);points.push({r,c});}
-      while(c!==w.c){c+=Math.sign(w.c-c);points.push({r,c});}
+    const specs=[];
+    let r=5,c=14,heading='S';
+    steps.forEach(step=>{
+      if(step.straight){
+        const vertical=heading==='S';
+        specs.push({shape:'straight',visualType:'straight',visualLength:step.straight,solutionRotation:vertical?0:1,rotation:0,solution:{r,c},id:specs.length});
+        if(vertical) r+=step.straight; else c+=step.straight;
+      } else {
+        const toEast=step.turn==='E';
+        specs.push({shape:'elbow',visualType:'corner',visualLength:2,solutionRotation:toEast?0:2,rotation:0,solution:{r,c},id:specs.length});
+        if(toEast){r+=1;c+=2;} else {r+=2;c+=1;}
+        heading=step.turn;
+      }
     });
-    // Route may not use repeated cells; it is an ordered connected path.
-    return points.slice(0,-1);
-  }
-  function requiredMask(path,i) {
-    const p=path[i], prev=path[i-1]||{r:3,c:14}, next=path[i+1]||{r:19,c:27};
-    let mask=0;
-    DIRS.forEach(d=>{
-      if(prev.r===p.r+d.dr && prev.c===p.c+d.dc) mask|=d.bit;
-      if(next.r===p.r+d.dr && next.c===p.c+d.dc) mask|=d.bit;
-    });
-    return mask;
-  }
-  function shapeFromMask(mask) {
-    const canonical=[['straight',5],['elbow',3],['tee',11],['cross',15],['cap',1]];
-    for(const [shape,base] of canonical) for(let rot=0;rot<4;rot++) if(rotateMask(base,rot)===mask) return shape;
-    return 'elbow';
+    return specs;
   }
   function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
@@ -325,7 +292,7 @@
   function renderPipes(){
     /* Recreate each pipe element so its position and rotation stay in sync. */
     board.querySelectorAll('.pipe-piece').forEach(e=>e.remove());
-    pipes.filter(p=>!p.hidden).forEach(p=>{
+    pipes.forEach(p=>{
       const el=document.createElement('div');el.className='pipe-piece';el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-label',`${p.shape} pipe. Select and press R to rotate.`);
       el.innerHTML=pipeSVG(p);el.dataset.pipeId=p.id;p.el=el;placePipeElement(p);
       el.addEventListener('click',e=>{e.stopPropagation();selectPipe(p);});
@@ -362,12 +329,11 @@
       if(!dragState||dragState.pointerId!==e2.pointerId)return;
       el.style.transform=`translate(${e2.clientX-dragState.startX}px, ${e2.clientY-dragState.startY}px)`;
       const target=cellFromPoint(e2.clientX,e2.clientY);
-      board.querySelectorAll('.drop-target,.drop-invalid').forEach(x=>x.classList.remove('drop-target','drop-invalid'));
       if(target){
         const targetR=Number(target.dataset.r)-dragState.pointerOffsetR;
         const targetC=Number(target.dataset.c)-dragState.pointerOffsetC;
         showDropPreview(dragState.p,targetR,targetC);
-      }
+      }else el.classList.add('invalid-placement');
     };
     const up=e2=>{
       if(!dragState||dragState.pointerId!==e2.pointerId)return;
@@ -379,7 +345,7 @@
         p0.r=r;p0.c=c;placePipeElement(p0);
         if(r!==oldR||c!==oldC){moves++;moveCountEl.textContent=String(moves);checkConnection();}
       }else{placePipeElement(p0);}
-      el.style.transform='';el.classList.remove('dragging');board.querySelectorAll('.drop-target,.drop-invalid').forEach(x=>x.classList.remove('drop-target','drop-invalid'));
+      el.style.transform='';el.classList.remove('dragging','invalid-placement');
       window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);dragState=null;
     };
     window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
@@ -413,7 +379,7 @@
         bit:endpoint.bit
       }));
     }
-    const length=p.hidden?1:p.visualLength;
+    const length=p.visualLength;
     const vertical=p.rotation%2===0;
     const firstBit=vertical?1:8;
     const secondBit=vertical?4:2;
@@ -429,36 +395,36 @@
       if(!endpointMap.has(endpointKey)) endpointMap.set(endpointKey,[]);
       endpointMap.get(endpointKey).push(pipe);
     }));
-    const queue=[];const visited=new Set();
-    // The locked well outlet touches the north edge of the first route cell.
+    const queue=[];const visited=new Map();
+    // The fixed well outlet opens downward into the cell directly below it.
     pipes.forEach(pipe=>pipeEndpoints(pipe).forEach(endpoint=>{
-      if(endpoint.r===4 && endpoint.c===14 && endpoint.bit===1){
-        queue.push(pipe);visited.add(pipe.id);
+      if(endpoint.r===SOURCE.r+1 && endpoint.c===SOURCE.c && endpoint.bit===1 && !visited.has(pipe.id)){
+        queue.push(pipe);visited.set(pipe.id,pipe);
       }
     }));
+    let reachedReservoir=false;
     while(queue.length){
       const pipe=queue.shift();
       pipeEndpoints(pipe).forEach(endpoint=>{
         const direction=DIRS.find(item=>item.bit===endpoint.bit);
         if(!direction)return;
         const nextR=endpoint.r+direction.dr,nextC=endpoint.c+direction.dc;
-        // Water reaches the reservoir when an endpoint touches any reservoir cell.
-        if(nextR>=17&&nextR<=19&&nextC>=25&&nextC<=29){winGame();return;}
+        if(inReservoir(nextR,nextC)){reachedReservoir=true;return;}
         const connected=endpointMap.get(`${nextR},${nextC},${direction.op}`)||[];
         connected.forEach(nextPipe=>{
-          if(!visited.has(nextPipe.id)){visited.add(nextPipe.id);queue.push(nextPipe);}
+          if(!visited.has(nextPipe.id)){visited.set(nextPipe.id,nextPipe);queue.push(nextPipe);}
         });
       });
-      if(won)return;
     }
+    if(reachedReservoir)winGame([...visited.values()]);
   }
-  function winGame(){
+  function winGame(connectedPipes=[]){
     if(won)return;won=true;
-    const reservoirWater=document.getElementById('reservoir-water');if(reservoirWater)reservoirWater.style.height='85%';
     const faucet=cellAt(3,14);const flow=document.createElement('div');flow.className='water-flow';faucet.appendChild(flow);
-    board.querySelectorAll('.pipe-piece, .source-pipe').forEach(el=>el.classList.add('watered'));
+    connectedPipes.forEach(pipe=>pipe.el.classList.add('watered'));
+    board.querySelector('.source-pipe').classList.add('watered');
     setTimeout(()=>{
-      const best=route.length+2;
+      const best=route.length*2;
       const ratio=moves<=best?3:(moves<=best+Math.max(5,Math.ceil(best*.35))?2:1);
       starRating.textContent='★'.repeat(ratio)+'☆'.repeat(3-ratio);
       starMessage.textContent=ratio===3?'Perfect connection!':ratio===2?'Great work, water hero!':'You made it flow — well done!';

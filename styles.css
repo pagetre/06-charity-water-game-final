@@ -679,14 +679,6 @@ kbd {
   background: transparent;
 }
 
-/* Grid lines stay hidden until a player points at a usable space. */
-.cell:hover,
-.cell.drop-target {
-  background: #b9e8f2 !important;
-}
-.cell.drop-invalid {
-  background: #f2a3a3 !important;
-}
 .skyline {
   position: absolute;
   inset: 0;
@@ -759,47 +751,32 @@ kbd {
 .reservoir {
   position: absolute;
   inset: 0;
-  background: #f8ffff;
-  border: 3px solid #fff;
+  background: #352319;
   overflow: hidden;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+}
+.reservoir img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  user-select: none;
 }
 .reservoir-label {
-  text-align: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
   z-index: 2;
-  font-size: clamp(6px, 0.95vw, 13px);
-  font-weight: 800;
-  color: #24596b;
-  line-height: 1.25;
-}
-.reservoir-label span {
-  display: block;
-  font-size: 1.5em;
-  margin-bottom: 2px;
-}
-.reservoir-water {
-  position: absolute;
-  left: -15%;
-  right: -15%;
-  bottom: -10%;
-  height: 57%;
-  background: repeating-linear-gradient(0deg, #2fb4dc 0 5px, #7bd5e8 6px 9px);
-  border-radius: 45% 50% 0 0;
-  transform: rotate(-4deg);
-  transition: height 0.5s;
-}
-.reservoir:before {
-  content: "";
-  position: absolute;
-  left: -5%;
-  right: -5%;
-  top: 23%;
-  height: 3px;
-  background: #c6e7ed;
-  transform: rotate(-5deg);
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-family: Georgia, serif;
+  font-size: clamp(5px, 0.8vw, 11px);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  line-height: 1;
+  white-space: nowrap;
 }
 /* Pipe appearance and visual feedback during dragging or a successful solve. */
 .pipe-piece {
@@ -818,11 +795,6 @@ kbd {
   cursor: grabbing;
   filter: drop-shadow(2px 4px 2px #555);
   z-index: 10;
-}
-.pipe-piece.selected {
-  outline: 2px dashed #168db6;
-  outline-offset: -1px;
-  filter: drop-shadow(0 0 3px #00a9d9);
 }
 .pipe-piece svg {
   width: 100%;
@@ -875,6 +847,14 @@ kbd {
 .pipe-piece.dragging {
   opacity: 0.7;
   z-index: 20;
+}
+.pipe-piece.invalid-placement::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgba(220, 40, 40, 0.55);
+  pointer-events: none;
 }
 .pipe-piece.watered .pipe-metal {
   stroke: #43c4e7;
